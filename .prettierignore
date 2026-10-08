@@ -1,6 +1,4 @@
 package-lock.json
 dist/
-music/
-docs/images/
 playwright-report/
 test-results/
