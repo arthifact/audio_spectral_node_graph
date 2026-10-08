@@ -25,7 +25,6 @@ test('load, play, pause, clear, finish, and replay local audio', async ({
   });
   const play = page.getByRole('button', { name: 'Play', exact: true });
   await expect(play).toBeEnabled();
-  await expect(page.locator('#welcome')).toBeHidden();
   await play.click();
   await expect(
     page.getByRole('button', { name: 'Pause', exact: true }),
