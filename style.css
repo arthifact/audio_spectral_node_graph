@@ -179,3 +179,9 @@ noscript {
     max-width: none;
   }
 }
+
+@media (max-height: 500px) {
+  .help {
+    bottom: 16px;
+  }
+}

@@ -1,26 +1,44 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { fitToViewport } from '../src/viewport.js';
+import { sceneViewport, projectPoint } from '../src/viewport.js';
 
-test('an offscreen graph fits between the mobile header and controls', () => {
-  const input = [
-    { sx: 900, sy: -1000, sc: 1.5, depth: 20 },
-    { sx: 2500, sy: 1200, sc: 0.5, depth: -30 },
-  ];
-  const fitted = fitToViewport(input, { width: 390, height: 844 });
-  assert.ok(fitted.every((point) => point.sx >= 40 && point.sx <= 350));
-  assert.ok(fitted.every((point) => point.sy >= 156 && point.sy <= 590));
-  assert.equal(fitted[0].depth, 20);
-  assert.equal(input[0].sx, 900);
-});
-
-test('empty and single-node graphs remain finite', () => {
-  assert.deepEqual(fitToViewport([], { width: 390, height: 844 }), []);
-  const [point] = fitToViewport([{ sx: 2000, sy: -500, sc: 1 }], {
+test('portrait scene fits between header and actual controls', () => {
+  const area = sceneViewport({
     width: 390,
     height: 844,
+    controlsTop: 630,
+    controlsLeft: 94,
   });
-  assert.equal(point.sx, 195);
-  assert.ok(Number.isFinite(point.sy));
-  assert.equal(point.sc, 1);
+  assert.equal(area.x, 195);
+  assert.ok(area.y - area.height / 2 >= 120);
+  assert.ok(area.y + area.height / 2 <= 590);
+});
+
+test('desktop and short landscape scenes reserve a side area for controls', () => {
+  for (const [width, height] of [
+    [1280, 800],
+    [740, 390],
+  ]) {
+    const area = sceneViewport({
+      width,
+      height,
+      controlsTop: height - 200,
+      controlsLeft: width - 304,
+    });
+    assert.ok(area.x + area.width / 2 < width - 304);
+    assert.ok(area.height >= 200);
+    assert.ok(area.y + area.height / 2 < height);
+  }
+});
+
+test('projection stays finite through a complete rotation', () => {
+  for (let angle = 0; angle < Math.PI * 2; angle += 0.1) {
+    const point = projectPoint(
+      { x: 1.4, y: -1.3, z: 0.95 },
+      { x: angle, y: angle },
+      4.5,
+    );
+    assert.ok(Object.values(point).every(Number.isFinite));
+    assert.ok(point.scale > 0 && point.scale <= 1.67);
+  }
 });
