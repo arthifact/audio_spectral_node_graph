@@ -104,7 +104,7 @@ test('drop audio and keep controls usable on a narrow screen', async ({
       );
       return transfer;
     },
-    [...makeWav(1)],
+    [...makeWav(4)],
   );
   await page.dispatchEvent('body', 'drop', { dataTransfer: data });
   await expect(page.locator('#filename')).toHaveText('dropped.wav');
@@ -122,9 +122,10 @@ test('drop audio and keep controls usable on a narrow screen', async ({
         let colored = 0;
         for (let i = 0; i < pixels.length; i += 4) {
           if (
-            pixels[i] > 40 &&
-            pixels[i] > pixels[i + 1] * 1.5 &&
-            pixels[i] > pixels[i + 2] * 1.5
+            Math.max(pixels[i], pixels[i + 1], pixels[i + 2]) > 40 &&
+            Math.max(pixels[i], pixels[i + 1], pixels[i + 2]) -
+              Math.min(pixels[i], pixels[i + 1], pixels[i + 2]) >
+              25
           )
             colored++;
         }
@@ -138,3 +139,41 @@ test('drop audio and keep controls usable on a narrow screen', async ({
   await page.getByText('How to use', { exact: true }).click();
   await expect(page.locator('.help')).toContainText('Play / pause');
 });
+
+for (const [profile, gain, sampleRate] of [
+  ['pad', 0.01, 44100],
+  ['beats', 1, 48000],
+  ['dense', 1, 44100],
+]) {
+  test(`visible, moving graph for ${profile} audio at gain ${gain}`, async ({
+    page,
+  }) => {
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.locator('#audio-file').setInputFiles({
+      name: profile + '.wav',
+      mimeType: 'audio/wav',
+      buffer: makeWav(7, sampleRate, { profile, gain }),
+    });
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+    const graphPixels = () =>
+      page.locator('canvas').evaluate((canvas) => {
+        const pixels = canvas
+          .getContext('2d')
+          .getImageData(150, 150, 650, 500).data;
+        let count = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+          const max = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
+          const min = Math.min(pixels[i], pixels[i + 1], pixels[i + 2]);
+          if (max > 40 && max - min > 25) count++;
+        }
+        return count;
+      });
+    await expect.poll(graphPixels).toBeGreaterThan(100);
+    const before = await page.locator('canvas').screenshot();
+    await page.waitForTimeout(400);
+    const after = await page.locator('canvas').screenshot();
+    expect(after.equals(before)).toBe(false);
+    expect(errors).toEqual([]);
+  });
+}

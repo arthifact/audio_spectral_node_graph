@@ -1,4 +1,4 @@
-// Features use p5.FFT byte magnitudes (0–255). Centroid and spread are
+// Features use linear magnitudes scaled to 0–255. Centroid and spread are
 // normalized to Nyquist; flux is RMS change, rather than positive-only flux.
 const clamp = (value, lo, hi) => Math.min(hi, Math.max(lo, value));
 
