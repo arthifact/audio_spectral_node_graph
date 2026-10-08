@@ -5,7 +5,6 @@ export function buildUI({ player, clear, toggleFullscreen }) {
   const clearButton = document.querySelector('#clear-graph');
   const fullscreenButton = document.querySelector('#fullscreen');
   const status = document.querySelector('#audio-status');
-  const welcome = document.querySelector('#welcome');
   const filename = document.querySelector('#filename');
 
   loadButton.addEventListener('click', () => fileInput.click());
@@ -56,9 +55,8 @@ export function buildUI({ player, clear, toggleFullscreen }) {
           : player.isLoaded
             ? player.isPlaying
               ? 'Playing. Drag the canvas to rotate.'
-              : 'Audio ready. Press Play to explore.'
-            : 'Audio stays on your device.');
-      welcome.hidden = player.isLoaded || player.isLoading;
+              : 'Press Play to start.'
+            : 'Load an audio file.');
     },
   };
 }

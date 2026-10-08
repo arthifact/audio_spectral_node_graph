@@ -31,45 +31,6 @@ canvas {
   font-weight: 500;
   margin: 0;
 }
-.app-header p {
-  color: #899ca8;
-  font-size: 11px;
-  margin-top: 7px;
-}
-
-.welcome {
-  position: fixed;
-  top: 45%;
-  left: 50%;
-  width: min(580px, calc(100vw - 48px));
-  transform: translate(-50%, -50%);
-  text-align: center;
-  pointer-events: none;
-}
-
-.eyebrow {
-  color: #5ae6f5;
-  font-size: 10px;
-  letter-spacing: 0.18em;
-}
-.welcome h2 {
-  font-family: system-ui, sans-serif;
-  font-size: clamp(32px, 5vw, 56px);
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-  margin: 24px 0;
-}
-.welcome p {
-  line-height: 1.8;
-  color: #9eafb9;
-  font-size: 12px;
-}
-.welcome .privacy-note {
-  font-size: 10px;
-  color: #748792;
-  margin-top: 28px;
-}
 
 .controls {
   position: fixed;
@@ -204,9 +165,6 @@ noscript {
     right: auto;
     text-align: left;
   }
-  .app-header p {
-    display: none;
-  }
   .controls {
     right: 16px;
     bottom: 16px;
@@ -219,12 +177,5 @@ noscript {
   }
   .help[open] {
     max-width: none;
-  }
-  .welcome {
-    top: 40%;
-  }
-  .welcome .privacy-note {
-    max-width: 220px;
-    margin: 18px auto 0;
   }
 }
