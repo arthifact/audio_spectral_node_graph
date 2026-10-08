@@ -23,5 +23,8 @@ export function projectPoint(point, rotation, perspective) {
   const y = point.y * cosX - z * sinX;
   const depth = point.y * sinX + z * cosX;
   const scale = perspective / Math.max(perspective * 0.6, perspective + depth);
-  return { x: x * scale, y: y * scale, depth, scale };
+  const roll = rotation.z || 0;
+  const screenX = x * Math.cos(roll) - y * Math.sin(roll);
+  const screenY = x * Math.sin(roll) + y * Math.cos(roll);
+  return { x: screenX * scale, y: screenY * scale, depth, scale };
 }

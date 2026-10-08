@@ -3,6 +3,7 @@ import { buildUI } from './ui.js';
 import { sceneViewport, projectPoint } from './viewport.js';
 import { AdaptiveAnalysis, normalizedSpectrum, smooth } from './adaptive.js';
 import CONFIG from './config.js';
+import { SmoothCamera } from './camera.js';
 
 const state = {
   analysis: new AdaptiveAnalysis(),
@@ -13,13 +14,11 @@ const state = {
   time: 0,
   sampleElapsed: 0,
   analysisElapsed: 0,
-  serial: 0,
   group: 0,
-  rotation: { x: 0.3, y: 0 },
+  rotation: { x: 0.3, y: 0, z: 0 },
+  flowSeed: { x: 0, y: 0, z: 0 },
   drag: { active: false, x: 0, y: 0, vx: 0, vy: 0 },
-  scale: 0,
-  center: { x: 0, y: 0 },
-  pulse: 0,
+  camera: new SmoothCamera(),
   level: 0,
   viewport: null,
 };
@@ -44,6 +43,7 @@ function setup() {
     radius: random(0.5, 1.5),
     phase: random(TWO_PI),
   }));
+  state.flowSeed = { x: random(1000), y: random(1000), z: random(1000) };
   player = new AudioPlayer({
     fft,
     amplitude,
@@ -64,7 +64,6 @@ function draw() {
   else
     state.features = { ...state.features, active: false, level: 0, pulse: 0 };
   state.level = smooth(state.level, state.features.level, 0.14, dt);
-  state.pulse = smooth(state.pulse, state.features.pulse, 0.06, dt);
   updateRotation(dt);
   updateNodes(dt);
   background(222, 45, 3);
@@ -92,19 +91,35 @@ function sampleAudio(dt) {
     dt: elapsed,
   });
   if (!state.features.active) return;
-  if (state.features.onset) state.group++;
+  if (state.features.onset) {
+    state.group++;
+    for (const node of state.nodes) {
+      if (node.age > 0.8) continue;
+      const push = state.features.pulse * (reducedMotion.matches ? 0.09 : 0.45);
+      node.vx += node.dx * push;
+      node.vy += node.dy * push;
+    }
+  }
   spawnNode(state.features);
 }
 
 function spawnNode(features) {
-  const phase = state.serial++ * 0.32;
-  // A small helix separates repeated spectra without obscuring their features.
-  const radius = 0.22 + features.level * 0.13;
+  // Restore the spectral plane: centroid and spread on diagonal axes.
+  // A slowly changing noise field separates repeated spectra without a loop.
+  const t = state.time * 0.35;
+  const { flowSeed } = state;
+  const x = (features.x - features.y) * Math.SQRT1_2 * 0.9;
+  const y = (features.x + features.y) * Math.SQRT1_2 * 0.8;
   state.nodes.push({
-    x: features.x * 0.95 + Math.cos(phase) * radius,
-    y: features.y * 0.85 + Math.sin(phase) * radius,
-    z: (features.tilt - 0.5) * 1.3 + Math.sin(phase * 0.7) * 0.3,
-    phase,
+    x,
+    y,
+    z: (features.tilt - 0.5) * 1.3 + (noise(flowSeed.z + t) - 0.5) * 0.3,
+    dx: (noise(flowSeed.x + t) - 0.5) * 0.4 + random(-0.45, 0.45),
+    dy: (noise(flowSeed.y + t) - 0.5) * 0.4 + random(-0.45, 0.45),
+    vx: random(-0.025, 0.025),
+    vy: random(-0.025, 0.025),
+    seedX: random(1000),
+    seedY: random(1000),
     hue: features.hue,
     level: features.level,
     onset: features.onset,
@@ -115,20 +130,42 @@ function spawnNode(features) {
 }
 
 function updateNodes(dt) {
-  for (const node of state.nodes) node.age += dt;
+  const motion = reducedMotion.matches ? 0.2 : 1;
+  const t = state.time * 0.3;
+  for (const node of state.nodes) {
+    node.age += dt;
+    const flow = (0.11 + state.level * 0.08) * motion;
+    node.vx = smooth(node.vx, (noise(node.seedX + t) - 0.5) * flow, 0.7, dt);
+    node.vy = smooth(node.vy, (noise(node.seedY + t) - 0.5) * flow, 0.7, dt);
+    node.dx += node.vx * dt;
+    node.dy += node.vy * dt;
+  }
   state.nodes = state.nodes.filter((node) => node.age < CONFIG.nodes.lifetime);
+  // Gentle local separation replaces the forced spiral with free movement.
+  for (let i = 0; i < state.nodes.length; i++) {
+    for (let j = i + 1; j < state.nodes.length; j++) {
+      const a = state.nodes[i],
+        b = state.nodes[j];
+      const dx = a.x + a.dx - b.x - b.dx;
+      const dy = a.y + a.dy - b.y - b.dy;
+      const distance = Math.hypot(dx, dy);
+      if (distance < 0.001 || distance > 0.15) continue;
+      const push = (1 - distance / 0.15) * 0.07 * dt * motion;
+      a.dx += (dx / distance) * push;
+      a.dy += (dy / distance) * push;
+      b.dx -= (dx / distance) * push;
+      b.dy -= (dy / distance) * push;
+    }
+  }
 }
 
 function updateRotation(dt) {
   if (state.drag.active) return;
   const speed = reducedMotion.matches ? 0.025 : CONFIG.scene.rotationSpeed;
+  const drift = noise(state.flowSeed.z + state.time * 0.045) - 0.5;
   state.rotation.y += (speed * (0.6 + state.level * 0.4) + state.drag.vx) * dt;
-  state.rotation.x = smooth(
-    state.rotation.x,
-    0.25 + Math.sin(state.time * 0.13) * 0.18,
-    5,
-    dt,
-  );
+  state.rotation.x = smooth(state.rotation.x, 0.3 + drift * 0.5, 5, dt);
+  state.rotation.z = smooth(state.rotation.z, drift * 0.25, 6, dt);
   state.rotation.x += state.drag.vy * dt;
   state.drag.vx *= Math.exp(-dt / 0.3);
   state.drag.vy *= Math.exp(-dt / 0.3);
@@ -136,70 +173,72 @@ function updateRotation(dt) {
 
 function projectNodes(dt) {
   const area = state.viewport;
-  const pulse = reducedMotion.matches ? 0 : state.pulse;
-  const points = state.nodes.map((node) => {
-    const drift = Math.min(node.age / 5, 1) * 0.1;
-    const breath = 1 + pulse * 0.035;
-    return projectPoint(
+  const points = state.nodes.map((node) =>
+    projectPoint(
       {
-        x: (node.x + Math.sin(state.time * 0.35 + node.phase) * drift) * breath,
-        y: (node.y + Math.cos(state.time * 0.28 + node.phase) * drift) * breath,
+        x: node.x + node.dx,
+        y: node.y + node.dy,
         z: node.z,
       },
       state.rotation,
       CONFIG.scene.perspective,
-    );
+    ),
+  );
+  const newest = state.nodes.at(-1);
+  let centerX = 0,
+    centerY = 0,
+    weight = 0;
+  points.forEach((point, i) => {
+    const importance = Math.exp(-state.nodes[i].age / 1.2);
+    centerX += point.x * importance;
+    centerY += point.y * importance;
+    weight += importance;
   });
-  if (points.length > 0) {
-    const xs = points.map((point) => point.x);
-    const ys = points.map((point) => point.y);
-    state.center.x = smooth(
-      state.center.x,
-      (Math.min(...xs) + Math.max(...xs)) / 2,
-      0.8,
-      dt,
-    );
-    state.center.y = smooth(
-      state.center.y,
-      (Math.min(...ys) + Math.max(...ys)) / 2,
-      0.8,
-      dt,
-    );
-  }
+  // Follow the newest sound gently; distant old points cannot jerk the view.
+  centerX = weight ? centerX / weight : 0;
+  centerY = weight ? centerY / weight : 0;
   const extentX = Math.max(
-    0.5,
-    ...points.map((point) => Math.abs(point.x - state.center.x)),
+    0.55,
+    ...points.map((point) => Math.abs(point.x - centerX)),
   );
   const extentY = Math.max(
-    0.5,
-    ...points.map((point) => Math.abs(point.y - state.center.y)),
+    0.55,
+    ...points.map((point) => Math.abs(point.y - centerY)),
   );
-  const targetScale = Math.min(
-    area.width / (extentX * 2 + 0.35),
-    area.height / (extentY * 2 + 0.35),
+  const frame = state.camera.update(
+    {
+      x: centerX,
+      y: centerY,
+      scale: Math.min(
+        area.width / (extentX * 2 + 0.65),
+        area.height / (extentY * 2 + 0.65),
+      ),
+    },
+    dt,
   );
-  state.scale = state.scale
-    ? smooth(
-        state.scale,
-        targetScale,
-        targetScale < state.scale ? 0.15 : 1.2,
-        dt,
-      )
-    : targetScale;
-  // A hard outer guard keeps new transients inside the available canvas.
-  const scale = Math.min(state.scale, targetScale * 1.04);
-  return points.map((point, i) => ({
-    ...point,
-    sx: area.x + (point.x - state.center.x) * scale,
-    sy: area.y + (point.y - state.center.y) * scale,
-    radius:
-      (4 + state.nodes[i].level * 7 + (state.nodes[i].onset ? 3 : 0)) *
-      point.scale *
-      Math.min(1.25, scale / 200),
-    alpha:
-      Math.min(1, state.nodes[i].age / 0.12) *
-      (1 - state.nodes[i].age / CONFIG.nodes.lifetime) ** 1.2,
-  }));
+  return points.map((point, i) => {
+    const node = state.nodes[i];
+    const inCurrent = node.group === state.group;
+    const recent = Math.max(
+      Math.max(0, 1 - node.age / 0.22),
+      inCurrent ? Math.min(1, Math.max(0, (0.8 - node.age) / 0.35)) : 0,
+    );
+    const life = Math.max(0, 1 - node.age / CONFIG.nodes.lifetime);
+    const alpha = (0.5 + recent * 0.5) * life ** 1.8;
+    return {
+      ...point,
+      sx: area.x + (point.x - frame.x) * frame.scale,
+      sy: area.y + (point.y - frame.y) * frame.scale,
+      radius:
+        (6 + node.level * 9 + (node.onset ? 2 : 0)) *
+        point.scale *
+        Math.min(1.2, frame.scale / 180) *
+        (0.5 + recent * 0.5),
+      alpha,
+      recent,
+      latest: node === newest,
+    };
+  });
 }
 
 function drawConnections(points) {
@@ -212,17 +251,13 @@ function drawConnections(points) {
       const distance = Math.hypot(a.sx - b.sx, a.sy - b.sy);
       const closeness = Math.max(
         0,
-        1 - distance / (state.viewport.width * 0.65),
+        1 - distance / (state.viewport.width * 0.7),
       );
-      if (closeness <= 0) continue;
-      const sameGroup = node.group === state.nodes[i - gap].group;
+      const highlight = Math.min(a.recent, b.recent);
       const alpha =
-        Math.min(a.alpha, b.alpha) *
-        closeness *
-        (gap === 1 ? 42 : 14) *
-        (sameGroup ? 1 : 0.5);
-      stroke(node.hue, 48, 88, alpha);
-      strokeWeight(gap === 1 ? 1 : 0.6);
+        Math.min(a.alpha, b.alpha) * closeness * (gap === 1 ? 65 : 24);
+      stroke(node.hue, 25 * (1 - highlight), 92, alpha);
+      strokeWeight(0.5 + highlight * 0.55);
       line(a.sx, a.sy, b.sx, b.sy);
     }
   }
@@ -234,29 +269,45 @@ function drawNodes(points) {
     .sort((a, b) => b.depth - a.depth);
   rectMode(CENTER);
   for (const point of order) {
-    const { node, sx, sy, radius, alpha } = point;
-    const near = Math.min(1, (node.age < 0.7 ? 1 : 0.65) * point.scale);
-    // A continuous falloff avoids hard rings around overlapping nodes.
-    const context = drawingContext;
-    context.save();
-    const glow = context.createRadialGradient(sx, sy, 0, sx, sy, radius * 3.5);
-    glow.addColorStop(0, `hsla(${node.hue}, 85%, 65%, ${alpha * near * 0.19})`);
-    glow.addColorStop(1, `hsla(${node.hue}, 85%, 65%, 0)`);
-    context.fillStyle = glow;
-    context.fillRect(
-      sx - radius * 3.5,
-      sy - radius * 3.5,
-      radius * 7,
-      radius * 7,
-    );
-    context.restore();
+    const { node, sx, sy, radius, alpha, recent, latest } = point;
+    if (alpha < 0.008) continue;
+    if (recent > 0.01) {
+      const context = drawingContext;
+      context.save();
+      const glow = context.createRadialGradient(
+        sx,
+        sy,
+        0,
+        sx,
+        sy,
+        radius * 2.8,
+      );
+      glow.addColorStop(
+        0,
+        `hsla(${node.hue}, 15%, 90%, ${alpha * recent * 0.18})`,
+      );
+      glow.addColorStop(1, `hsla(${node.hue}, 15%, 90%, 0)`);
+      context.fillStyle = glow;
+      context.fillRect(
+        sx - radius * 2.8,
+        sy - radius * 2.8,
+        radius * 5.6,
+        radius * 5.6,
+      );
+      context.restore();
+    }
+    // White current sound, small translucent colored history.
     noFill();
-    stroke(node.hue, 40, 100, alpha * (35 + near * 50));
-    strokeWeight(node.onset ? 1.5 : 0.85);
-    rect(sx, sy, radius * 2, radius * 2, 1);
+    stroke(node.hue, 70 * (1 - recent), 100, alpha * 100);
+    strokeWeight(latest ? 2.2 : 0.55 + recent * 1.1);
+    rect(sx, sy, radius * 2, radius * 2);
     noStroke();
-    fill(node.hue, 12, 100, alpha * 90);
-    circle(sx, sy, Math.max(1.5, radius * 0.24));
+    fill(node.hue, 80 * (1 - recent), 100, alpha * 100);
+    circle(
+      sx,
+      sy,
+      latest ? Math.max(4, radius * 0.28) : Math.max(1.5, radius * 0.2),
+    );
   }
 }
 
@@ -325,6 +376,7 @@ function drawReadout() {
 }
 
 function updateViewport() {
+  const previous = state.viewport;
   const controls = document.querySelector('.controls').getBoundingClientRect();
   state.viewport = sceneViewport({
     width,
@@ -332,6 +384,12 @@ function updateViewport() {
     controlsTop: controls.top,
     controlsLeft: controls.left,
   });
+  if (previous) {
+    state.camera.rescale(
+      Math.min(state.viewport.width, state.viewport.height) /
+        Math.min(previous.width, previous.height),
+    );
+  }
 }
 
 function attachPointerControls(canvas) {
@@ -401,12 +459,9 @@ function resetAudioState() {
   state.nodes = [];
   state.sampleElapsed = 0;
   state.analysisElapsed = 0;
-  state.serial = 0;
   state.group = 0;
-  state.pulse = 0;
   state.level = 0;
-  state.scale = 0;
-  state.center = { x: 0, y: 0 };
+  state.camera.reset();
 }
 
 // p5 global mode discovers lifecycle callbacks on window.

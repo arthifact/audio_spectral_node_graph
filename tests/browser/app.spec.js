@@ -177,3 +177,32 @@ for (const [profile, gain, sampleRate] of [
     expect(errors).toEqual([]);
   });
 }
+
+test('recent sound is white, stays visible after resizing, and fades on pause', async ({
+  page,
+}) => {
+  await page.locator('#audio-file').setInputFiles({
+    name: 'steady.wav',
+    mimeType: 'audio/wav',
+    buffer: makeWav(10, 44100, { profile: 'pad', gain: 0.1 }),
+  });
+  const whitePixels = () =>
+    page.locator('canvas').evaluate((canvas) => {
+      const pixels = canvas
+        .getContext('2d')
+        .getImageData(0, 130, canvas.width, canvas.height - 350).data;
+      let count = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const low = Math.min(pixels[i], pixels[i + 1], pixels[i + 2]);
+        const high = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
+        if (low > 140 && high - low < 20) count++;
+      }
+      return count;
+    });
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect.poll(whitePixels).toBeGreaterThan(30);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(whitePixels).toBeGreaterThan(30);
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect.poll(whitePixels).toBe(0);
+});

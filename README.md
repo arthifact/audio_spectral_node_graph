@@ -11,7 +11,7 @@ C = \frac{\sum_k f_k A_k}{\sum_k A_k}, \qquad
 S = \sqrt{\frac{\sum_k (f_k-C)^2 A_k}{\sum_k A_k}}
 $$
 
-$C$ is the spectral centroid (mean frequency); $S$ is the spectral spread. Their recent ranges set node position; the balance between low and high frequencies sets depth. Centroid sets color, relative RMS level sets size, and spectral changes create pulses. Connections link nearby moments. Sensitivity adapts to the audio without changing playback volume.
+$C$ is the spectral centroid (mean frequency); $S$ is the spectral spread. Their recent ranges set node position; the balance between low and high frequencies sets depth. Centroid sets color, relative RMS level sets size, and spectral changes create pulses. Connections link nearby moments. Recent nodes are white; older ones fade. Sensitivity adapts without changing playback volume.
 
 To run locally with Node.js 22 or newer:
 
