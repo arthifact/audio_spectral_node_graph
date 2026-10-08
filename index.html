@@ -1,13 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" type="text/css" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.12/lib/p5.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.12/lib/addons/p5.sound.min.js"></script>
-</head>
-<body>
-  <main></main>
-  <script src="sketch.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Explore sound as a moving spectral node graph. A browser-based audio visualizer built with p5.js and Web Audio."
+    />
+    <meta name="theme-color" content="#05070a" />
+    <title>Audio Spectral Node Graph</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.12/lib/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.12/lib/addons/p5.sound.min.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Audio Spectral Node Graph</h1>
+      <p>Sound, seen in motion.</p>
+    </header>
+    <main id="visualizer" aria-label="Audio spectral node graph"></main>
+    <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+      <p class="eyebrow">A SPACE FOR YOUR SOUND</p>
+      <h2 id="welcome-title">Give your music<br />a new dimension.</h2>
+      <p>
+        Load an audio file or drop one anywhere.<br />Press Play and watch its
+        spectrum take shape.
+      </p>
+      <p class="privacy-note">
+        No account. No uploads. Your audio stays on your device.
+      </p>
+    </section>
+    <section class="controls" aria-label="Audio controls">
+      <p id="filename" class="filename">No audio selected</p>
+      <input
+        id="audio-file"
+        type="file"
+        accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.aif,.aiff"
+        hidden
+        aria-label="Choose an audio file"
+      />
+      <div class="primary-controls">
+        <button id="load-audio" class="load-button" type="button">
+          Load audio
+        </button>
+        <button id="play-audio" class="play-button" type="button" disabled>
+          Play
+        </button>
+      </div>
+      <div class="secondary-controls">
+        <button id="clear-graph" type="button" disabled>Clear graph</button>
+        <button id="fullscreen" type="button">Fullscreen</button>
+      </div>
+      <p
+        id="audio-status"
+        class="audio-status"
+        role="status"
+        aria-live="polite"
+      >
+        Audio stays on your device.
+      </p>
+    </section>
+    <details class="help">
+      <summary>How to use</summary>
+      <p>
+        Load your own MP3, WAV, or other browser-supported audio. Drag the
+        canvas to rotate the graph.
+      </p>
+      <dl>
+        <dt>Space</dt>
+        <dd>Play / pause</dd>
+        <dt>C</dt>
+        <dd>Clear the graph</dd>
+        <dt>F</dt>
+        <dd>Toggle fullscreen</dd>
+        <dt>+ / −</dt>
+        <dd>Shift the automatic rotation</dd>
+      </dl>
+      <p>
+        Color follows spectral brightness; size follows loudness. Connected
+        nodes trace consecutive moments of sound.
+      </p>
+      <a
+        href="https://github.com/arthifact/audio_spectral_node_graph"
+        target="_blank"
+        rel="noopener noreferrer"
+        >View the project on GitHub ↗</a
+      >
+    </details>
+    <div class="drop-overlay" aria-hidden="true">Drop your audio here</div>
+    <noscript
+      >This visualizer requires JavaScript and a browser with Web Audio
+      support.</noscript
+    >
+    <script type="module" src="src/sketch.js"></script>
+  </body>
 </html>
