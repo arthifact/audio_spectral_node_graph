@@ -155,20 +155,44 @@ for (const [profile, gain, sampleRate] of [
       mimeType: 'audio/wav',
       buffer: makeWav(7, sampleRate, { profile, gain }),
     });
-    await page.getByRole('button', { name: 'Play', exact: true }).click();
     const graphPixels = () =>
       page.locator('canvas').evaluate((canvas) => {
+        const bounds = canvas.getBoundingClientRect();
+        const overlays = [
+          ...document.querySelectorAll('.controls, .help, .app-header'),
+        ].map((element) => element.getBoundingClientRect());
         const pixels = canvas
           .getContext('2d')
-          .getImageData(150, 150, 650, 500).data;
+          .getImageData(0, 0, canvas.width, canvas.height).data;
         let count = 0;
-        for (let i = 0; i < pixels.length; i += 4) {
-          const max = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
-          const min = Math.min(pixels[i], pixels[i + 1], pixels[i + 2]);
-          if (max > 40 && max - min > 25) count++;
+        // The original orbit can move beyond the center. Exclude the spectrum,
+        // readout and controls, and include both colored history and white nodes.
+        for (let y = 0; y < canvas.height; y++) {
+          const screenY = bounds.top + (y / canvas.height) * bounds.height;
+          for (let x = 0; x < canvas.width; x++) {
+            const screenX = bounds.left + (x / canvas.width) * bounds.width;
+            if (screenY < 55 || (screenX < 150 && screenY < 250)) continue;
+            if (
+              overlays.some(
+                (rect) =>
+                  screenX >= rect.left &&
+                  screenX <= rect.right &&
+                  screenY >= rect.top &&
+                  screenY <= rect.bottom,
+              )
+            )
+              continue;
+            const i = (y * canvas.width + x) * 4;
+            const max = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
+            const min = Math.min(pixels[i], pixels[i + 1], pixels[i + 2]);
+            if ((max > 40 && max - min > 25) || (min > 140 && max - min < 25))
+              count++;
+          }
         }
         return count;
       });
+    expect(await graphPixels()).toBe(0);
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
     await expect.poll(graphPixels).toBeGreaterThan(100);
     const before = await page.locator('canvas').screenshot();
     await page.waitForTimeout(400);

@@ -16,9 +16,10 @@ function limitVector(x, y, maximum) {
 
 // Ease both camera position and velocity so new outliers cannot snap the view.
 export class SmoothCamera {
-  constructor({ panSpeed = 65, maxZoomRate = 0.35 } = {}) {
+  constructor({ panSpeed = 65, maxZoomRate = 0.35, panInPixels = false } = {}) {
     this.panSpeed = panSpeed;
     this.maxZoomRate = maxZoomRate;
+    this.panInPixels = panInPixels;
     this.reset();
   }
 
@@ -64,8 +65,10 @@ export class SmoothCamera {
     this.zoomVelocity = zoom.velocity;
     this.scale *= Math.exp(zoom.distance);
 
-    // Positions use scene units. Bound their movement in screen pixels instead.
-    const maximumSpeed = this.panSpeed / Math.max(previousScale, this.scale);
+    // Scene coordinates need conversion; pixel offsets already use screen units.
+    const maximumSpeed = this.panInPixels
+      ? this.panSpeed
+      : this.panSpeed / Math.max(previousScale, this.scale);
     const desired = limitVector(
       (x - this.x) / 1.2,
       (y - this.y) / 1.2,

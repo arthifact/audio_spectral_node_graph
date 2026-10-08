@@ -9,7 +9,7 @@
     "build": "node scripts/build.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run format:check && node --check src/sketch.js && node --check src/config.js && node --check src/camera.js && node --check src/adaptive.js && node --check src/viewport.js && node --check src/spectral.js && node --check src/audio.js && node --check src/ui.js && node --check scripts/serve.js && node --check scripts/build.js",
+    "check": "npm run format:check && node --check src/sketch.js && node --check src/config.js && node --check src/camera.js && node --check src/rendering.js && node --check src/adaptive.js && node --check src/viewport.js && node --check src/spectral.js && node --check src/audio.js && node --check src/ui.js && node --check scripts/serve.js && node --check scripts/build.js",
     "test": "node --test tests/*.test.js",
     "test:browser": "playwright test"
   },
