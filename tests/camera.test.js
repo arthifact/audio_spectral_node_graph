@@ -24,6 +24,36 @@ test('camera eases extreme position and zoom changes within rate limits', () => 
   }
 });
 
+test('pixel-coordinate camera limits pan independently of focal distance', () => {
+  const camera = new SmoothCamera({
+    panSpeed: 100,
+    maxZoomRate: 0.4,
+    panInPixels: true,
+  });
+  let previous = camera.update({ x: 0, y: 0, scale: 300 }, 0);
+  const dt = 1 / 60;
+  let initialTravel = 0;
+  for (let frame = 0; frame < 600; frame++) {
+    const target =
+      frame < 300
+        ? { x: 10000, y: -10000, scale: 2 }
+        : { x: -10000, y: 10000, scale: 20000 };
+    const current = camera.update(target, dt);
+    const distance = Math.hypot(current.x - previous.x, current.y - previous.y);
+    assert.ok(Object.values(current).every(Number.isFinite));
+    assert.ok(distance <= 100 * dt + 1e-9);
+    assert.ok(
+      Math.abs(Math.log(current.scale / previous.scale)) <= 0.4 * dt + 1e-12,
+    );
+    if (frame < 60) initialTravel += distance;
+    previous = current;
+  }
+  assert.ok(
+    initialTravel > 75,
+    'pixel pan must not be divided by focal distance',
+  );
+});
+
 test('camera starts and reverses gradually rather than jumping to a new target', () => {
   const camera = new SmoothCamera();
   camera.update({ x: 0, y: 0, scale: 200 }, 0);
