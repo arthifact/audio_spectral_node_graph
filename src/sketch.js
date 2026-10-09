@@ -203,7 +203,6 @@ function draw() {
 }
 
 function frameVisibleNodes(projections) {
-  const header = document.querySelector('.app-header').getBoundingClientRect();
   const obstacles = [
     ...document.querySelectorAll('.controls, .help[open]'),
   ].map((element) => element.getBoundingClientRect());
@@ -223,7 +222,7 @@ function frameVisibleNodes(projections) {
   });
   return state.frame.update(
     framed,
-    { width, height, top: Math.max(55, header.bottom + 20), obstacles },
+    { width, height, top: 55, obstacles },
     Math.min(deltaTime / 1000, 0.08),
   );
 }

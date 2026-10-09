@@ -158,9 +158,9 @@ for (const [profile, gain, sampleRate] of [
     const graphPixels = () =>
       page.locator('canvas').evaluate((canvas) => {
         const bounds = canvas.getBoundingClientRect();
-        const overlays = [
-          ...document.querySelectorAll('.controls, .help, .app-header'),
-        ].map((element) => element.getBoundingClientRect());
+        const overlays = [...document.querySelectorAll('.controls, .help')].map(
+          (element) => element.getBoundingClientRect(),
+        );
         const pixels = canvas
           .getContext('2d')
           .getImageData(0, 0, canvas.width, canvas.height).data;
