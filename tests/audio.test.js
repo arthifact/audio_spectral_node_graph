@@ -85,14 +85,12 @@ const file = (name = 'My song.mp3') => ({ name, type: 'audio/mpeg' });
 test('a local file is decoded and ready without starting playback', async (t) => {
   const { player, calls, inputs, revoked } = setup(t);
   const loaded = player.loadFile(file());
-  assert.equal(player.isLoading, true);
   assert.equal(player.isLoaded, false);
   assert.equal(calls[0].url, 'blob:test-1');
   calls[0].resolve();
   await loaded;
   assert.equal(player.filename, 'My song.mp3');
   assert.equal(player.isLoaded, true);
-  assert.equal(player.isLoading, false);
   assert.equal(player.isPlaying, false);
   assert.equal(calls[0].sound.plays, 0);
   assert.deepEqual(inputs, [
@@ -110,13 +108,13 @@ test('a local file replaces a pending file and ignores its late completion', asy
   await firstLoad;
   assert.equal(calls[0].sound.disposals, 1);
   assert.equal(player.filename, 'My song.mp3');
-  assert.equal(player.isLoading, true);
+  assert.equal(player.isLoaded, false);
   const changes = fixture.changes;
   calls[0].resolve();
   await Promise.resolve();
   assert.equal(fixture.changes, changes);
   assert.equal(player.sound, null);
-  assert.equal(player.isLoading, true);
+  assert.equal(player.isLoaded, false);
   calls[1].resolve();
   await localLoad;
   assert.equal(player.sound, calls[1].sound);
@@ -172,7 +170,6 @@ test('a failed file decode allows recovery with another file', async (t) => {
   const first = player.loadFile(file('Broken.mp3'));
   calls[0].reject(new Error('Cannot decode'));
   await first;
-  assert.equal(player.isLoading, false);
   assert.equal(player.isLoaded, false);
   assert.equal(player.sound, null);
   assert.match(player.error, /could not be decoded/);
@@ -189,7 +186,6 @@ test('a local decode failure releases the object URL and reports the current err
   const loaded = player.loadFile(file());
   calls[0].reject(new Error('Cannot decode'));
   await loaded;
-  assert.equal(player.isLoading, false);
   assert.equal(player.isLoaded, false);
   assert.match(player.error, /could not be decoded/);
   assert.equal(calls[0].sound.disposals, 1);

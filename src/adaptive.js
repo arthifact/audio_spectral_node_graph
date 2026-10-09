@@ -1,10 +1,4 @@
-import {
-  melEnergies,
-  spectralCentroid,
-  spectralSpread,
-  spectralFlux,
-  spectralTilt,
-} from './spectral.js';
+import { melEnergies, spectralFlux } from './spectral.js';
 
 const clamp = (value, low = 0, high = 1) =>
   Math.min(high, Math.max(low, value));
@@ -24,27 +18,10 @@ export function normalizedSpectrum(decibels) {
   );
 }
 
-// Keep each feature legible within its recent range, including steady tones.
-class FeatureRange {
-  constructor() {
-    this.mean = null;
-    this.variance = 0;
-  }
-
-  update(value, dt) {
-    this.mean ??= value;
-    const difference = value - this.mean;
-    this.mean = smooth(this.mean, value, 2.5, dt);
-    this.variance = smooth(this.variance, difference ** 2, 2.5, dt);
-    return Math.tanh(difference / (0.06 + 2 * Math.sqrt(this.variance)));
-  }
-}
-
 export class AdaptiveAnalysis {
   constructor() {
     this.reference = 0;
     this.level = 0;
-    this.pulse = 0;
     this.elapsed = 0;
     this.lastOnset = -Infinity;
     this.previousMel = null;
@@ -52,13 +29,10 @@ export class AdaptiveAnalysis {
     this.fluxDeviation = 0;
     this.bassMean = 0;
     this.levelMean = 0;
-    this.centroidRange = new FeatureRange();
-    this.spreadRange = new FeatureRange();
   }
 
   update({ spectrum, rms, sampleRate, dt }) {
     this.elapsed += dt;
-    this.pulse *= Math.exp(-dt / 0.24);
     // Follow quiet passages too; a loud intro should not set the whole track.
     this.reference = Math.max(rms, this.reference * Math.exp(-dt / 0.9));
     const active = rms > Math.max(0.00001, this.reference * 0.007);
@@ -71,13 +45,10 @@ export class AdaptiveAnalysis {
       return {
         active: false,
         level: this.level,
-        pulse: this.pulse,
         onset: false,
       };
     }
 
-    const centroid = spectralCentroid(spectrum);
-    const spread = spectralSpread(spectrum, centroid);
     const mel = melEnergies(spectrum, {
       bands: 40,
       maxFreq: 14000,
@@ -102,10 +73,7 @@ export class AdaptiveAnalysis {
       this.elapsed - this.lastOnset > 0.28 &&
       (flux > fluxThreshold ||
         (bass - this.bassMean > 0.12 && this.level - this.levelMean > 0.08));
-    if (onset) {
-      this.lastOnset = this.elapsed;
-      this.pulse = clamp(0.35 + flux * 2 + Math.max(0, bass - this.bassMean));
-    }
+    if (onset) this.lastOnset = this.elapsed;
     this.fluxDeviation = smooth(
       this.fluxDeviation,
       Math.abs(flux - this.fluxMean),
@@ -116,24 +84,11 @@ export class AdaptiveAnalysis {
     this.bassMean = smooth(this.bassMean, bass, 0.45, dt);
     this.levelMean = smooth(this.levelMean, this.level, 0.45, dt);
 
-    const centroidHz = (centroid * sampleRate) / 2;
-    const spreadHz = (spread * sampleRate) / 2;
-    const brightness = clamp(
-      Math.log1p(centroidHz / 150) / Math.log1p(8000 / 150),
-    );
     return {
       active,
       level: this.level,
-      pulse: this.pulse,
       onset,
       flux,
-      bass,
-      centroid,
-      spread,
-      tilt: spectralTilt(mel),
-      x: this.centroidRange.update(brightness, dt),
-      y: this.spreadRange.update(Math.log1p(spreadHz / 300) / 4, dt),
-      hue: 270 - brightness * 240,
     };
   }
 }

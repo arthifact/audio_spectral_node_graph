@@ -24,18 +24,27 @@ const input = (rms, bin = 12, dt = 0.05) => ({
 test('changing gain by 60 dB preserves spectral shape and visual response', () => {
   const loud = new AdaptiveAnalysis(),
     quiet = new AdaptiveAnalysis();
+  const loudSpectrum = normalizedSpectrum(decibels());
+  const quietSpectrum = normalizedSpectrum(decibels(0.001));
+  loudSpectrum.forEach((value, i) =>
+    assert.ok(Math.abs(value - quietSpectrum[i]) < 1e-4),
+  );
+  let onsets = 0;
   for (let i = 0; i < 100; i++) {
     const level = 0.1 + Math.sin(i / 7) * 0.08;
-    const a = loud.update(input(level));
+    const bin = 4 + (Math.floor(i / 5) % 20) * 4;
+    const a = loud.update(input(level, bin));
     const b = quiet.update({
-      ...input(level / 1000),
-      spectrum: normalizedSpectrum(decibels(0.001)),
+      ...input(level / 1000, bin),
+      spectrum: normalizedSpectrum(decibels(0.001, bin)),
     });
-    for (const key of ['level', 'centroid', 'spread', 'hue', 'x', 'y'])
+    for (const key of ['level', 'flux'])
       assert.ok(Math.abs(a[key] - b[key]) < 1e-6, key);
     assert.equal(a.onset, b.onset);
     assert.equal(b.active, true);
+    if (a.onset) onsets++;
   }
+  assert.ok(onsets > 0);
 });
 
 test('silence never spawns a graph or an onset, including after loud audio', () => {
@@ -67,16 +76,14 @@ test('sensitivity recovers during a quiet passage after a loud intro', () => {
   assert.ok(result.level > 0.7);
 });
 
-test('rapid spectral changes have bounded pulses and an onset cooldown', () => {
+test('rapid spectral changes have finite flux and an onset cooldown', () => {
   const analysis = new AdaptiveAnalysis();
   const times = [];
   for (let i = 0; i < 400; i++) {
     const result = analysis.update(
       input(i % 2 ? 0.05 : 0.2, i % 9 < 4 ? 4 : 120),
     );
-    assert.ok(result.pulse >= 0 && result.pulse <= 1);
-    assert.ok(result.x >= -1 && result.x <= 1);
-    assert.ok(result.y >= -1 && result.y <= 1);
+    assert.ok(Number.isFinite(result.flux) && result.flux >= 0);
     if (result.onset) times.push(i * 0.05);
   }
   assert.ok(times.length > 0);

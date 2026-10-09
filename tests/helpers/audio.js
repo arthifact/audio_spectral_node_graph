@@ -45,7 +45,6 @@ export function makeWav(
         Array.from({ length: 10 }, (_, n) =>
           Math.sin(2 * Math.PI * (110 * (n + 1) + n * n * 19) * t),
         ).reduce((sum, value) => sum + value, 0) * 0.06;
-    if (profile === 'silence') signal = 0;
     data.writeInt16LE(
       Math.round(Math.max(-1, Math.min(1, signal * gain)) * 32767),
       44 + i * 2,

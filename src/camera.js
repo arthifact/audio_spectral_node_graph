@@ -16,10 +16,9 @@ function limitVector(x, y, maximum) {
 
 // Ease both camera position and velocity so new outliers cannot snap the view.
 export class SmoothCamera {
-  constructor({ panSpeed = 65, maxZoomRate = 0.35, panInPixels = false } = {}) {
+  constructor({ panSpeed = 65, maxZoomRate = 0.35 } = {}) {
     this.panSpeed = panSpeed;
     this.maxZoomRate = maxZoomRate;
-    this.panInPixels = panInPixels;
     this.reset();
   }
 
@@ -29,13 +28,6 @@ export class SmoothCamera {
     this.scale = null;
     this.vx = 0;
     this.vy = 0;
-    this.zoomVelocity = 0;
-  }
-
-  // A viewport resize changes pixel scale immediately, without moving the scene.
-  rescale(factor) {
-    if (!Number.isFinite(factor) || factor <= 0 || this.scale === null) return;
-    this.scale = clamp(this.scale * factor, 0.000001, 1000000);
     this.zoomVelocity = 0;
   }
 
@@ -53,7 +45,6 @@ export class SmoothCamera {
       return { x: this.x, y: this.y, scale: this.scale };
     }
 
-    const previousScale = this.scale;
     const zoomError = Math.log(scale / this.scale);
     const zoomTime = zoomError < 0 ? 0.9 : 2;
     const zoom = easeVelocity(
@@ -65,16 +56,12 @@ export class SmoothCamera {
     this.zoomVelocity = zoom.velocity;
     this.scale *= Math.exp(zoom.distance);
 
-    // Scene coordinates need conversion; pixel offsets already use screen units.
-    const maximumSpeed = this.panInPixels
-      ? this.panSpeed
-      : this.panSpeed / Math.max(previousScale, this.scale);
     const desired = limitVector(
       (x - this.x) / 1.2,
       (y - this.y) / 1.2,
-      maximumSpeed,
+      this.panSpeed,
     );
-    const velocity = limitVector(this.vx, this.vy, maximumSpeed);
+    const velocity = limitVector(this.vx, this.vy, this.panSpeed);
     const panX = easeVelocity(velocity.x, desired.x, 0.2, dt);
     const panY = easeVelocity(velocity.y, desired.y, 0.2, dt);
     this.vx = panX.velocity;
