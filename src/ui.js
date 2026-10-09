@@ -46,15 +46,8 @@ export function buildUI({ player, clear, toggleFullscreen }) {
       playButton.textContent = player.isPlaying ? 'Pause' : 'Play';
       clearButton.disabled = !player.isLoaded;
       filename.textContent = player.filename || 'No audio selected';
-      status.textContent =
-        player.error ||
-        (player.isLoading
-          ? 'Loading audio…'
-          : player.isLoaded
-            ? player.isPlaying
-              ? 'Playing. Drag the canvas to rotate.'
-              : ''
-            : 'Load an audio file.');
+      status.textContent = player.error;
+      status.hidden = !player.error;
     },
   };
 }

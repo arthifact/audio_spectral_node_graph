@@ -18,11 +18,12 @@ test('default piano is ready without autoplay and can be replaced', async ({
   await expect(page.locator('#filename')).toHaveText(
     'Midsummer Sky — Kevin MacLeod',
   );
-  await expect(page.getByRole('status')).toBeEmpty();
+  await expect(page.locator('#audio-status')).toBeHidden();
   await play.click();
   await expect(
     page.getByRole('button', { name: 'Pause', exact: true }),
   ).toBeEnabled();
+  await expect(page.locator('#audio-status')).toBeHidden();
   await expect
     .poll(() =>
       page.locator('canvas').evaluate((canvas) => {
@@ -46,7 +47,7 @@ test('default piano is ready without autoplay and can be replaced', async ({
   });
   await expect(page.locator('#filename')).toHaveText('my-song.wav');
   await expect(play).toBeEnabled();
-  await expect(page.getByRole('status')).toBeEmpty();
+  await expect(page.locator('#audio-status')).toBeHidden();
   expect(errors).toEqual([]);
 });
 
@@ -68,7 +69,10 @@ for (const status of [200, 404]) {
       finish();
     });
     await page.goto('/');
-    await expect(page.getByRole('status')).toHaveText('Loading audio…');
+    await expect(page.locator('#filename')).toHaveText(
+      'Midsummer Sky — Kevin MacLeod',
+    );
+    await expect(page.locator('#audio-status')).toBeHidden();
     await expect(
       page.getByRole('button', { name: 'Load audio' }),
     ).toBeEnabled();
@@ -86,7 +90,7 @@ for (const status of [200, 404]) {
       page.getByRole('button', { name: 'Pause', exact: true }),
     ).toBeEnabled();
     await expect(page.locator('#filename')).toHaveText('my-song.wav');
-    await expect(page.getByRole('status')).toContainText('Playing.');
+    await expect(page.locator('#audio-status')).toBeHidden();
   });
 }
 
@@ -112,5 +116,5 @@ test('missing default leaves local audio loading available', async ({
   await expect(
     page.getByRole('button', { name: 'Play', exact: true }),
   ).toBeEnabled();
-  await expect(page.getByRole('status')).toBeEmpty();
+  await expect(page.locator('#audio-status')).toBeHidden();
 });
