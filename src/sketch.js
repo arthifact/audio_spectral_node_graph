@@ -120,6 +120,10 @@ function setup() {
   });
   ui = buildUI({ player, clear: resetAudioState, toggleFullscreen });
   ui.update();
+  player.loadDefault(
+    'audio/midsummer-sky.mp3',
+    'Midsummer Sky — Kevin MacLeod',
+  );
 }
 
 function initStars() {
