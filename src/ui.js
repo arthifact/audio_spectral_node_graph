@@ -4,7 +4,6 @@ export function buildUI({ player, clear, toggleFullscreen }) {
   const playButton = document.querySelector('#play-audio');
   const clearButton = document.querySelector('#clear-graph');
   const fullscreenButton = document.querySelector('#fullscreen');
-  const status = document.querySelector('#audio-status');
   const filename = document.querySelector('#filename');
 
   loadButton.addEventListener('click', () => fileInput.click());
@@ -45,16 +44,10 @@ export function buildUI({ player, clear, toggleFullscreen }) {
       playButton.disabled = !player.isLoaded;
       playButton.textContent = player.isPlaying ? 'Pause' : 'Play';
       clearButton.disabled = !player.isLoaded;
-      filename.textContent = player.filename || 'No audio selected';
-      status.textContent =
-        player.error ||
-        (player.isLoading
-          ? 'Loading audio…'
-          : player.isLoaded
-            ? player.isPlaying
-              ? 'Playing. Drag the canvas to rotate.'
-              : ''
-            : 'Load an audio file.');
+      filename.textContent =
+        player.error || player.filename || 'No audio selected';
+      filename.classList.toggle('has-error', Boolean(player.error));
+      filename.title = filename.textContent;
     },
   };
 }

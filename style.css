@@ -52,6 +52,10 @@ canvas {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.filename.has-error {
+  color: #eab6aa;
+  white-space: normal;
+}
 .primary-controls,
 .secondary-controls {
   display: flex;
@@ -96,14 +100,6 @@ button:focus-visible {
 button:disabled {
   opacity: 0.45;
   cursor: default !important;
-}
-
-.audio-status {
-  min-height: 1.5em;
-  margin: 12px 0 0;
-  color: #a4b6c0;
-  font-size: 10px;
-  line-height: 1.5;
 }
 
 .help {

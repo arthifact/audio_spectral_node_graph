@@ -20,7 +20,9 @@
     </header>
     <main id="visualizer" aria-label="Audio spectral node graph"></main>
     <section class="controls" aria-label="Audio controls">
-      <p id="filename" class="filename">No audio selected</p>
+      <p id="filename" class="filename" role="status" aria-live="polite">
+        No audio selected
+      </p>
       <input
         id="audio-file"
         type="file"
@@ -40,14 +42,6 @@
         <button id="clear-graph" type="button" disabled>Clear graph</button>
         <button id="fullscreen" type="button">Fullscreen</button>
       </div>
-      <p
-        id="audio-status"
-        class="audio-status"
-        role="status"
-        aria-live="polite"
-      >
-        Load an audio file.
-      </p>
     </section>
     <details class="help">
       <summary>How to use</summary>
