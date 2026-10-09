@@ -2,7 +2,7 @@
 
 [Open the app](https://arthifact.github.io/audio_spectral_node_graph/)
 
-A browser-based audio visualizer built with p5.js and Web Audio. Press Play for the default piano track, or load your own audio. Drag to rotate. Audio is processed locally.
+A browser-based audio visualizer built with p5.js and Web Audio. Load your audio, press Play, and drag to rotate. Audio is processed locally.
 
 Each node represents a moment of sound. The FFT gives magnitudes $A_k$ at frequencies $f_k$. Two features describe the spectrum:
 
@@ -21,5 +21,3 @@ npm start
 ```
 
 Open <http://127.0.0.1:8000>.
-
-Default audio: [Midsummer Sky](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100158) by Kevin MacLeod (incompetech.com), 1:54, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Original recording, unchanged.

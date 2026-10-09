@@ -13,13 +13,8 @@ export class AudioPlayer {
     this.filename = '';
     this.error = '';
     this.starting = false;
-    this.isDefault = false;
     this.loadId = 0;
     this.pendingLoad = null;
-  }
-
-  loadDefault(url, name = 'Default audio') {
-    return this.loadSource(url, name, { isDefault: true });
   }
 
   loadFile(file) {
@@ -33,12 +28,10 @@ export class AudioPlayer {
       return;
     }
 
-    return this.loadSource(URL.createObjectURL(file), file.name, {
-      revokeURL: true,
-    });
+    return this.loadSource(URL.createObjectURL(file), file.name);
   }
 
-  async loadSource(url, name, { isDefault = false, revokeURL = false } = {}) {
+  async loadSource(url, name) {
     const loadId = ++this.loadId;
     this.pendingLoad?.cancel();
     this.pendingLoad = null;
@@ -46,7 +39,6 @@ export class AudioPlayer {
     this.isLoaded = false;
     this.isPlaying = false;
     this.starting = false;
-    this.isDefault = isDefault;
     this.filename = name;
     this.error = '';
     if (this.sound) {
@@ -62,7 +54,7 @@ export class AudioPlayer {
     this.pendingLoad = request;
     let urlReleased = false;
     const releaseURL = () => {
-      if (revokeURL && !urlReleased) {
+      if (!urlReleased) {
         URL.revokeObjectURL(url);
         urlReleased = true;
       }
@@ -95,9 +87,8 @@ export class AudioPlayer {
       if (loadId !== this.loadId) return;
       request.sound?.dispose();
       this.sound = null;
-      this.error = isDefault
-        ? 'The default audio could not be loaded. Load your own audio to continue.'
-        : 'This file could not be decoded. Try a different MP3 or WAV file.';
+      this.error =
+        'This file could not be decoded. Try a different MP3 or WAV file.';
     } finally {
       releaseURL();
       if (loadId === this.loadId) {

@@ -6,7 +6,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'dist');
 await rm(output, { recursive: true, force: true });
 await mkdir(resolve(output, 'vendor'), { recursive: true });
-for (const path of ['src', 'style.css', 'favicon.svg', 'audio']) {
+for (const path of ['src', 'style.css', 'favicon.svg']) {
   await cp(resolve(root, path), resolve(output, path), { recursive: true });
 }
 for (const name of ['p5.min.js', 'addons/p5.sound.min.js']) {
@@ -30,4 +30,4 @@ const html = (await readFile(resolve(root, 'index.html'), 'utf8'))
   );
 await writeFile(resolve(output, 'index.html'), html);
 await writeFile(resolve(output, '.nojekyll'), '');
-console.log('Static site built in dist/ with the default piano recording.');
+console.log('Static site built in dist/.');
