@@ -8,7 +8,6 @@ export class AudioPlayer {
     this.onReset = onReset;
     this.sound = null;
     this.isLoaded = false;
-    this.isLoading = false;
     this.isPlaying = false;
     this.filename = '';
     this.error = '';
@@ -35,7 +34,6 @@ export class AudioPlayer {
     const loadId = ++this.loadId;
     this.pendingLoad?.cancel();
     this.pendingLoad = null;
-    this.isLoading = true;
     this.isLoaded = false;
     this.isPlaying = false;
     this.starting = false;
@@ -93,7 +91,6 @@ export class AudioPlayer {
       releaseURL();
       if (loadId === this.loadId) {
         this.pendingLoad = null;
-        this.isLoading = false;
         this.onChange();
       }
     }

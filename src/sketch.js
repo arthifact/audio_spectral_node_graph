@@ -30,7 +30,6 @@ const state = {
   camera: new SmoothCamera({
     panSpeed: 100,
     maxZoomRate: 0.4,
-    panInPixels: true,
   }),
   frame: new ViewportFrame(),
 
@@ -89,7 +88,7 @@ const state = {
     burstKick: 0,
     zoomKick: 0,
   },
-  music: { bassRise: 0, melodyDrive: 0, boom: 0, prevCentroid: 0 },
+  music: { melodyDrive: 0, boom: 0, prevCentroid: 0 },
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -151,7 +150,6 @@ function draw() {
 
   updateCameraRotation();
   drawStars();
-  if (CONFIG.grid.enabled) drawReferenceGrid();
   drawFreqBar();
 
   if (player.isLoaded && player.isPlaying) {
@@ -672,7 +670,6 @@ function updateImmersionState(spec, rms, centroid) {
   );
   state.bass.base = lerp(state.bass.base, bass, 0.03);
   const rise = max(0, bass - state.bass.base * 0.97);
-  state.music.bassRise = lerp(state.music.bassRise, rise, 0.24);
   state.bass.shockPulse = lerp(state.bass.shockPulse, rise * 2.3, 0.12);
   state.bass.shockPulse *= 0.95;
   if (
@@ -735,18 +732,15 @@ function spawnNode(mel, centroid, spread, rms, tSec) {
     vy: random(-0.25, 0.25),
     hue,
     sz,
-    rms,
     centroid,
     spread,
     tilt,
-    mel,
     tSec,
     unclutterSeed: (cBin * 0.37 + sBin * 0.73) % (Math.PI * 2),
     unclutterSlot,
     burstId: state.currentBurst,
     seedA: random(1000),
     seedB: random(1000),
-    t: tSec.toFixed(2),
     age: 0,
   };
   state.nodes.push(node);
@@ -1187,33 +1181,6 @@ function drawFreqBar() {
   });
 }
 
-// ── REFERENCE GRID ──
-
-function drawReferenceGrid() {
-  const cfg = CONFIG.grid;
-  const div = cfg.divisions,
-    margin = 60;
-  stroke(0, 0, 20, cfg.alpha);
-  strokeWeight(0.3);
-  for (let i = 0; i <= div; i++) {
-    const x = map(i, 0, div, margin, width - margin);
-    const y = map(i, 0, div, margin, height - margin);
-    line(x, margin, x, height - margin);
-    line(margin, y, width - margin, y);
-  }
-  noStroke();
-  fill(0, 0, 25, cfg.labelAlpha);
-  textSize(7);
-  textAlign(LEFT);
-  text('centroid\u2192', margin, height - margin + 12);
-  push();
-  translate(margin - 10, height - margin);
-  rotate(-HALF_PI);
-  textAlign(LEFT);
-  text('spread\u2192', 0, 0);
-  pop();
-}
-
 // ── SCIENTIFIC READOUT PANEL ──
 
 function drawReadoutPanel() {
@@ -1451,7 +1418,6 @@ function resetAudioState() {
   state.director.wanderTimer = 0;
   state.director.burstKick = 0;
   state.director.zoomKick = 0;
-  state.music.bassRise = 0;
   state.music.melodyDrive = 0;
   state.music.boom = 0;
   state.music.prevCentroid = 0;

@@ -45,7 +45,6 @@ const CONFIG = {
 
   wobble: {
     speed: 0.0052,
-    panSway: 0.028,
     yawSpeed: 0.0055,
     yawVariation: 0.0042,
     pitchSpeed: 0.004,
@@ -130,13 +129,6 @@ const CONFIG = {
     lineHeight: 13,
     labelColor: 28,
     valueColor: 52,
-  },
-
-  grid: {
-    enabled: false,
-    divisions: 8,
-    alpha: 6,
-    labelAlpha: 14,
   },
 };
 
