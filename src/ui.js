@@ -55,7 +55,7 @@ export function buildUI({ player, clear, toggleFullscreen }) {
           : player.isLoaded
             ? player.isPlaying
               ? 'Playing. Drag the canvas to rotate.'
-              : 'Press Play to start.'
+              : ''
             : 'Load an audio file.');
     },
   };

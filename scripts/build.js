@@ -6,7 +6,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'dist');
 await rm(output, { recursive: true, force: true });
 await mkdir(resolve(output, 'vendor'), { recursive: true });
-for (const path of ['src', 'style.css']) {
+for (const path of ['src', 'style.css', 'favicon.svg']) {
   await cp(resolve(root, path), resolve(output, path), { recursive: true });
 }
 for (const name of ['p5.min.js', 'addons/p5.sound.min.js']) {
