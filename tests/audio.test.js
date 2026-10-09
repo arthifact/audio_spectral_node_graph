@@ -82,16 +82,15 @@ function setup(t) {
 
 const file = (name = 'My song.mp3') => ({ name, type: 'audio/mpeg' });
 
-test('the default is decoded and ready without starting playback', async (t) => {
+test('a local file is decoded and ready without starting playback', async (t) => {
   const { player, calls, inputs, revoked } = setup(t);
-  const loaded = player.loadDefault('audio/default.mp3', 'A gentle piece');
+  const loaded = player.loadFile(file());
   assert.equal(player.isLoading, true);
   assert.equal(player.isLoaded, false);
-  assert.equal(calls[0].url, 'audio/default.mp3');
+  assert.equal(calls[0].url, 'blob:test-1');
   calls[0].resolve();
   await loaded;
-  assert.equal(player.filename, 'A gentle piece');
-  assert.equal(player.isDefault, true);
+  assert.equal(player.filename, 'My song.mp3');
   assert.equal(player.isLoaded, true);
   assert.equal(player.isLoading, false);
   assert.equal(player.isPlaying, false);
@@ -100,19 +99,18 @@ test('the default is decoded and ready without starting playback', async (t) => 
     ['fft', calls[0].sound],
     ['amplitude', calls[0].sound],
   ]);
-  assert.deepEqual(revoked, []);
+  assert.deepEqual(revoked, ['blob:test-1']);
 });
 
-test('a local file replaces a pending default and ignores its late completion', async (t) => {
+test('a local file replaces a pending file and ignores its late completion', async (t) => {
   const fixture = setup(t);
   const { player, calls, inputs } = fixture;
-  const defaultLoad = player.loadDefault('audio/default.mp3');
+  const firstLoad = player.loadFile(file('First.mp3'));
   const localLoad = player.loadFile(file());
-  await defaultLoad;
+  await firstLoad;
   assert.equal(calls[0].sound.disposals, 1);
   assert.equal(player.filename, 'My song.mp3');
   assert.equal(player.isLoading, true);
-  assert.equal(player.isDefault, false);
   const changes = fixture.changes;
   calls[0].resolve();
   await Promise.resolve();
@@ -123,7 +121,7 @@ test('a local file replaces a pending default and ignores its late completion', 
   await localLoad;
   assert.equal(player.sound, calls[1].sound);
   assert.ok(inputs.every(([, sound]) => sound === calls[1].sound));
-  assert.deepEqual(fixture.revoked, ['blob:test-1']);
+  assert.deepEqual(fixture.revoked, ['blob:test-1', 'blob:test-2']);
 });
 
 test('replacing pending local files releases their resources and ignores stale errors', async (t) => {
@@ -146,10 +144,10 @@ test('replacing pending local files releases their resources and ignores stale e
   assert.deepEqual(revoked, ['blob:test-1', 'blob:test-2']);
 });
 
-test('a playing default stops when replaced and its end callback cannot change playback', async (t) => {
+test('a playing file stops when replaced and its end callback cannot change playback', async (t) => {
   const fixture = setup(t);
   const { player, calls } = fixture;
-  const first = player.loadDefault('audio/default.mp3');
+  const first = player.loadFile(file('First.mp3'));
   calls[0].resolve();
   await first;
   await player.togglePlay();
@@ -169,22 +167,21 @@ test('a playing default stops when replaced and its end callback cannot change p
   assert.equal(fixture.changes, changes);
 });
 
-test('default load failure allows recovery with a local file', async (t) => {
+test('a failed file decode allows recovery with another file', async (t) => {
   const { player, calls } = setup(t);
-  const first = player.loadDefault('audio/missing.mp3');
-  calls[0].reject(new Error('Not found'));
+  const first = player.loadFile(file('Broken.mp3'));
+  calls[0].reject(new Error('Cannot decode'));
   await first;
   assert.equal(player.isLoading, false);
   assert.equal(player.isLoaded, false);
   assert.equal(player.sound, null);
-  assert.match(player.error, /default audio.*Load your own audio/);
+  assert.match(player.error, /could not be decoded/);
   assert.equal(calls[0].sound.disposals, 1);
   const second = player.loadFile(file());
   calls[1].resolve();
   await second;
   assert.equal(player.error, '');
   assert.equal(player.isLoaded, true);
-  assert.equal(player.isDefault, false);
 });
 
 test('a local decode failure releases the object URL and reports the current error', async (t) => {
@@ -201,7 +198,7 @@ test('a local decode failure releases the object URL and reports the current err
 
 test('invalid selections leave the current sound available', async (t) => {
   const { player, calls } = setup(t);
-  const loaded = player.loadDefault('audio/default.mp3');
+  const loaded = player.loadFile(file());
   calls[0].resolve();
   await loaded;
   player.loadFile({ name: 'notes.txt', type: 'text/plain' });
@@ -213,7 +210,7 @@ test('invalid selections leave the current sound available', async (t) => {
 
 test('a replaced sound never plays when an earlier audio-context resume finishes', async (t) => {
   const { player, calls } = setup(t);
-  const loaded = player.loadDefault('audio/default.mp3');
+  const loaded = player.loadFile(file('First.mp3'));
   calls[0].resolve();
   await loaded;
   let resolveStart;
@@ -236,7 +233,7 @@ test('a replaced sound never plays when an earlier audio-context resume finishes
 test('replacement prevents delayed playback and delayed playback errors from affecting the new sound', async (t) => {
   const fixture = setup(t);
   const { player, calls } = fixture;
-  const loaded = player.loadDefault('audio/default.mp3');
+  const loaded = player.loadFile(file('First.mp3'));
   calls[0].resolve();
   await loaded;
   let rejectOldStart;

@@ -36,17 +36,17 @@ canvas {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 280px;
+  width: 220px;
   box-sizing: border-box;
-  padding: 16px;
+  padding: 10px;
   background: #0a1016ed;
   border: 1px solid #28353f;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .filename {
-  font-size: 11px;
-  margin: 0 0 14px;
+  font-size: 10px;
+  margin: 0 0 8px;
   color: #b3c4ce;
   overflow: hidden;
   white-space: nowrap;
@@ -59,18 +59,18 @@ canvas {
 .primary-controls,
 .secondary-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 .secondary-controls {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 button {
   flex: 1;
-  min-height: 40px;
+  min-height: 32px;
   border: 1px solid #34424d;
   border-radius: 6px;
   font: inherit;
-  font-size: 11px;
+  font-size: 10px;
   background: #101a22;
   color: #c8d8e2;
   cursor: pointer;
@@ -88,8 +88,10 @@ button:hover:enabled {
   border-color: #375d45;
 }
 .secondary-controls button {
-  min-height: 32px;
+  min-height: 28px;
   font-size: 10px;
+  padding: 0;
+  white-space: nowrap;
 }
 
 button:focus-visible {
@@ -165,11 +167,11 @@ noscript {
   .controls {
     right: 16px;
     bottom: 16px;
-    width: min(280px, calc(100vw - 32px));
+    width: min(220px, calc(100vw - 32px));
   }
   .help {
     left: 22px;
-    bottom: 216px;
+    bottom: 144px;
     right: 22px;
   }
   .help[open] {
