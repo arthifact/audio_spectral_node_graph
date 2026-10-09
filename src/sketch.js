@@ -1,6 +1,6 @@
 import { AudioPlayer } from './audio.js';
 import { buildUI } from './ui.js';
-import { fitToViewport } from './viewport.js';
+import { ViewportFrame } from './viewport.js';
 import CONFIG from './config.js';
 import { AdaptiveAnalysis, normalizedSpectrum } from './adaptive.js';
 import { SmoothCamera } from './camera.js';
@@ -32,6 +32,7 @@ const state = {
     maxZoomRate: 0.4,
     panInPixels: true,
   }),
+  frame: new ViewportFrame(),
 
   liveSpectrum: null,
   liveCentroid: 0,
@@ -184,7 +185,10 @@ function draw() {
   state.pan.y = camera.y;
   state.focal.current = camera.scale;
 
-  if (width < 800) projections = fitToViewport(projections, { width, height });
+  // Render the current camera, then contain every visible node, including history.
+  projections = projectNodesToScreen();
+  applyUnclutterOffsets(projections);
+  projections = frameVisibleNodes(projections);
   const renderOrder = calculateRenderOrder(projections);
   drawEdges3D(projections);
   drawBurstBox(projections);
@@ -196,6 +200,32 @@ function draw() {
 
   applyRepulsion();
   updateNodeLifecycle();
+}
+
+function frameVisibleNodes(projections) {
+  const header = document.querySelector('.app-header').getBoundingClientRect();
+  const obstacles = [
+    ...document.querySelectorAll('.controls, .help[open]'),
+  ].map((element) => element.getBoundingClientRect());
+  const framed = projections.map((point, i) => {
+    const node = state.nodes[i];
+    const current = isHighlighted(node, state.currentBurst);
+    const life = constrain(1 - node.age / CONFIG.nodes.fadeFrames, 0, 1);
+    const sizeMult = current ? 1 : pow(life, 0.65);
+    const depthFade = constrain(map(point.depth, -500, 300, 0.45, 1), 0.35, 1);
+    const alpha = current ? 95 * depthFade : pow(life, 1.6) * 85 * depthFade;
+    return {
+      ...point,
+      visible: alpha >= 1.5 && sizeMult >= 0.05,
+      // Include the solid square and labels; faint outer halos may cross the inset.
+      radius: node.sz * point.sc * sizeMult * 0.5 + 21 * point.sc,
+    };
+  });
+  return state.frame.update(
+    framed,
+    { width, height, top: Math.max(55, header.bottom + 20), obstacles },
+    Math.min(deltaTime / 1000, 0.08),
+  );
 }
 
 function resetImmersionEffects() {
@@ -1356,6 +1386,12 @@ function keyPressed(event) {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  state.frame.reset();
+  state.burstBBox.initialized = false;
+  state.pan.prevCenterX = width / 2;
+  state.pan.prevCenterY = height / 2;
+  state.pan.velocityX = 0;
+  state.pan.velocityY = 0;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1378,6 +1414,7 @@ function resetAudioState() {
   state.analysisElapsed = 0;
   state.features = { active: false, level: 0 };
   state.camera.reset();
+  state.frame.reset();
   state.currentBurst = 0;
   state.framesSinceSpawn = 0;
   state.unclutterSlots = new Map();
