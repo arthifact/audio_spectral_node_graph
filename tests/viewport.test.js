@@ -193,7 +193,10 @@ test('framing releases gradually and reset restores the identity', () => {
     { sx: 600, sy: 400, sc: 0.5, radius: 10 },
   ];
   let fitted = frame.update(compact, viewport, 1 / 60);
-  assert.ok(scaleOf(compact[0], fitted[0]) >= originalScale - EPSILON);
+  assert.ok(
+    Math.abs(Math.log(scaleOf(compact[0], fitted[0]) / originalScale)) < 0.01,
+    'retained zoom momentum changes scale gradually before recovering',
+  );
   assert.ok(scaleOf(compact[0], fitted[0]) < 1);
   for (let index = 0; index < 1200; index += 1) {
     fitted = frame.update(compact, viewport, 1 / 60);
@@ -254,5 +257,134 @@ test('empty, all-faded, single-node, and tiny views remain finite', () => {
       top: 0,
       bottom: viewport.height,
     });
+  }
+});
+
+test('a smoothly changing graph does not jump between areas beside the controls', () => {
+  const frame = new ViewportFrame();
+  const obstacle = { left: 1000, right: 1280, top: 620, bottom: 800 };
+  const viewport = { width: 1280, height: 800, obstacles: [obstacle] };
+  let previousCenter;
+  let maximumStep = 0;
+  for (let index = 0; index <= 360; index += 1) {
+    const angle = (index / 360) * Math.PI * 2;
+    const x = 640 - 400 * Math.sin(angle);
+    const y = 400 + 350 * Math.sin(angle * 0.7);
+    const graphWidth = 850 + 300 * Math.sin(angle * 2);
+    const graphHeight = 450 + 140 * Math.cos(angle * 2);
+    const points = [
+      { sx: x - graphWidth / 2, sy: y - graphHeight / 2, sc: 1, radius: 12 },
+      { sx: x + graphWidth / 2, sy: y + graphHeight / 2, sc: 1, radius: 12 },
+    ];
+    const fitted = frame.update(points, viewport, 1 / 60);
+    assertUniform(points, fitted);
+    assertContained(points, fitted, {
+      left: 24,
+      right: 1256,
+      top: 64,
+      bottom: 776,
+    });
+    const graph = boundsOf(points, fitted);
+    assert.ok(
+      graph.right <= obstacle.left + EPSILON ||
+        graph.left >= obstacle.right - EPSILON ||
+        graph.bottom <= obstacle.top + EPSILON ||
+        graph.top >= obstacle.bottom - EPSILON,
+      'the graph stays clear of the controls throughout the movement',
+    );
+    const center = {
+      x: (fitted[0].sx + fitted[1].sx) / 2,
+      y: (fitted[0].sy + fitted[1].sy) / 2,
+    };
+    if (previousCenter) {
+      maximumStep = Math.max(
+        maximumStep,
+        Math.hypot(center.x - previousCenter.x, center.y - previousCenter.y),
+      );
+    }
+    previousCenter = center;
+  }
+  assert.ok(
+    maximumStep < 20,
+    `smooth input must not cause a framing jump (${maximumStep.toFixed(2)}px)`,
+  );
+});
+
+test('a slowly drifting graph eases into the screen boundary', () => {
+  const frame = new ViewportFrame();
+  const viewport = { width: 1280, height: 800 };
+  const pointsAt = (offset) => [
+    { sx: 100 + offset, sy: 300, sc: 1, radius: 16 },
+    { sx: 1100 + offset, sy: 500, sc: 1, radius: 16 },
+  ];
+  for (let index = 0; index < 120; index += 1) {
+    frame.update(pointsAt(0), viewport, 1 / 60);
+  }
+  let previousX;
+  let previousVelocity;
+  let maximumAcceleration = 0;
+  for (let index = 0; index < 300; index += 1) {
+    const points = pointsAt(index * 1.5);
+    const fitted = frame.update(points, viewport, 1 / 60);
+    assertContained(points, fitted, {
+      left: 24,
+      right: 1256,
+      top: 64,
+      bottom: 776,
+    });
+    if (previousX !== undefined) {
+      const velocity = fitted[0].sx - previousX;
+      if (previousVelocity !== undefined) {
+        maximumAcceleration = Math.max(
+          maximumAcceleration,
+          Math.abs(velocity - previousVelocity),
+        );
+      }
+      previousVelocity = velocity;
+    }
+    previousX = fitted[0].sx;
+  }
+  assert.ok(
+    maximumAcceleration < 0.6,
+    `framing must ease before reaching the edge (${maximumAcceleration.toFixed(2)}px/frame²)`,
+  );
+});
+
+test('framing follows the same smooth path at 30 and 60 frames per second', () => {
+  const viewport = {
+    width: 1280,
+    height: 800,
+    obstacles: [{ left: 1000, right: 1280, top: 620, bottom: 800 }],
+  };
+  function followPath(fps) {
+    const frame = new ViewportFrame();
+    let fitted;
+    for (let index = 0; index <= fps * 6; index += 1) {
+      const seconds = index / fps;
+      const angle = seconds * 0.6;
+      const x = 640 - 240 * Math.sin(angle);
+      const y = 400 + 180 * Math.sin(angle * 0.7);
+      const graphWidth = 850 + 200 * Math.sin(angle * 2);
+      const graphHeight = 450 + 110 * Math.cos(angle * 2);
+      const points = [
+        { sx: x - graphWidth / 2, sy: y - graphHeight / 2, sc: 1, radius: 16 },
+        { sx: x + graphWidth / 2, sy: y + graphHeight / 2, sc: 1, radius: 16 },
+      ];
+      fitted = frame.update(points, viewport, index === 0 ? 0 : 1 / fps);
+      assertContained(points, fitted, {
+        left: 24,
+        right: 1256,
+        top: 64,
+        bottom: 776,
+      });
+    }
+    return fitted;
+  }
+  const at30 = followPath(30);
+  const at60 = followPath(60);
+  for (let index = 0; index < at30.length; index += 1) {
+    assert.ok(Math.abs(at30[index].sx - at60[index].sx) < 4);
+    assert.ok(Math.abs(at30[index].sy - at60[index].sy) < 4);
+    assert.ok(Math.abs(at30[index].sc - at60[index].sc) < 0.015);
   }
 });
