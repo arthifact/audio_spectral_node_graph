@@ -1099,7 +1099,7 @@ function drawOrbitHint() {
     cy - rh - 5,
   );
   fill(0, 0, 24);
-  text('drag \u00b7 auto-spin \u00b7 [+/-] rotation', cx, cy + rh + 11);
+  text('drag \u00b7 auto-spin', cx, cy + rh + 11);
 }
 
 // ── FREQUENCY BAR (live spectrum overlay + centroid marker) ──
@@ -1379,8 +1379,6 @@ function keyPressed(event) {
     return false;
   }
   if (key === 'c' || key === 'C') resetAudioState();
-  if (key === '+' || key === '=') state.rotation.wobbleT += 0.5;
-  if (key === '-') state.rotation.wobbleT -= 0.5;
   if (key === 'f' || key === 'F') toggleFullscreen();
 }
 
