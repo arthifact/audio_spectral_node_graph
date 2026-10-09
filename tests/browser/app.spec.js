@@ -17,7 +17,7 @@ test('load, play, pause, clear, finish, and replay local audio', async ({
   });
   await expect(
     page.getByRole('button', { name: 'Play', exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await page.locator('#audio-file').setInputFiles({
     name: 'test-tone.wav',
     mimeType: 'audio/wav',

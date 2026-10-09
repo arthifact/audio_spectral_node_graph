@@ -13,10 +13,17 @@ export class AudioPlayer {
     this.filename = '';
     this.error = '';
     this.starting = false;
+    this.isDefault = false;
+    this.loadId = 0;
+    this.pendingLoad = null;
   }
 
-  async loadFile(file) {
-    if (!file || this.isLoading) return;
+  loadDefault(url, name = 'Default audio') {
+    return this.loadSource(url, name, { isDefault: true });
+  }
+
+  loadFile(file) {
+    if (!file) return;
     if (
       !file.type.startsWith('audio/') &&
       !/\.(mp3|wav|ogg|m4a|aac|flac|aiff?)$/i.test(file.name)
@@ -26,10 +33,21 @@ export class AudioPlayer {
       return;
     }
 
+    return this.loadSource(URL.createObjectURL(file), file.name, {
+      revokeURL: true,
+    });
+  }
+
+  async loadSource(url, name, { isDefault = false, revokeURL = false } = {}) {
+    const loadId = ++this.loadId;
+    this.pendingLoad?.cancel();
+    this.pendingLoad = null;
     this.isLoading = true;
     this.isLoaded = false;
     this.isPlaying = false;
-    this.filename = file.name;
+    this.starting = false;
+    this.isDefault = isDefault;
+    this.filename = name;
     this.error = '';
     if (this.sound) {
       this.sound.onended(() => {});
@@ -40,12 +58,28 @@ export class AudioPlayer {
     this.onReset();
     this.onChange();
 
-    const url = URL.createObjectURL(file);
-    let pending;
+    const request = { sound: null, cancel: null };
+    this.pendingLoad = request;
+    let urlReleased = false;
+    const releaseURL = () => {
+      if (revokeURL && !urlReleased) {
+        URL.revokeObjectURL(url);
+        urlReleased = true;
+      }
+    };
     try {
-      this.sound = await new Promise((resolve, reject) => {
-        pending = loadSound(url, resolve, reject);
+      const sound = await new Promise((resolve, reject) => {
+        request.cancel = () => {
+          // Disposing a pending p5 SoundFile suppresses its load callback.
+          // Settle the old request ourselves so replacement also releases it.
+          request.sound?.dispose();
+          releaseURL();
+          resolve(null);
+        };
+        request.sound = loadSound(url, resolve, reject);
       });
+      if (loadId !== this.loadId) return;
+      this.sound = sound;
       this.fft.setInput(this.sound);
       this.amplitude.setInput(this.sound);
       this.sound.onended((sound) => {
@@ -58,13 +92,19 @@ export class AudioPlayer {
       });
       this.isLoaded = true;
     } catch {
-      pending?.dispose();
-      this.error =
-        'This file could not be decoded. Try a different MP3 or WAV file.';
+      if (loadId !== this.loadId) return;
+      request.sound?.dispose();
+      this.sound = null;
+      this.error = isDefault
+        ? 'The default audio could not be loaded. Load your own audio to continue.'
+        : 'This file could not be decoded. Try a different MP3 or WAV file.';
     } finally {
-      URL.revokeObjectURL(url);
-      this.isLoading = false;
-      this.onChange();
+      releaseURL();
+      if (loadId === this.loadId) {
+        this.pendingLoad = null;
+        this.isLoading = false;
+        this.onChange();
+      }
     }
   }
 
@@ -78,18 +118,23 @@ export class AudioPlayer {
     }
     this.starting = true;
     const sound = this.sound;
+    const loadId = this.loadId;
     try {
       await userStartAudio();
-      if (sound !== this.sound || !this.isLoaded) return;
+      if (loadId !== this.loadId || sound !== this.sound || !this.isLoaded)
+        return;
       if (!sound.isPaused()) this.onReset();
       sound.play();
       this.isPlaying = true;
       this.error = '';
     } catch {
-      this.error = 'Playback could not start. Press Play to try again.';
+      if (loadId === this.loadId)
+        this.error = 'Playback could not start. Press Play to try again.';
     } finally {
-      this.starting = false;
-      this.onChange();
+      if (loadId === this.loadId) {
+        this.starting = false;
+        this.onChange();
+      }
     }
   }
 }

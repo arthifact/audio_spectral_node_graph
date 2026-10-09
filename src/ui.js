@@ -42,8 +42,6 @@ export function buildUI({ player, clear, toggleFullscreen }) {
 
   return {
     update() {
-      loadButton.disabled = player.isLoading;
-      loadButton.textContent = player.isLoading ? 'Loading…' : 'Load audio';
       playButton.disabled = !player.isLoaded;
       playButton.textContent = player.isPlaying ? 'Pause' : 'Play';
       clearButton.disabled = !player.isLoaded;
@@ -51,7 +49,7 @@ export function buildUI({ player, clear, toggleFullscreen }) {
       status.textContent =
         player.error ||
         (player.isLoading
-          ? 'Decoding audio…'
+          ? 'Loading audio…'
           : player.isLoaded
             ? player.isPlaying
               ? 'Playing. Drag the canvas to rotate.'
